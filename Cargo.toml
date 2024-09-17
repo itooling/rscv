@@ -1,0 +1,16 @@
+[package]
+name = "rscv"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "rust cv"
+documentation = "https://docs.rs/rscv"
+repository = "https://github.com/itooling/rscv"
+
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+
+[dependencies]
+rand = "0.8.5"
