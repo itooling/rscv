@@ -1,8 +1,11 @@
 use minifb::{Key, Window, WindowOptions};
 
-use crate::one;
+pub type ColorRgb = (u8, u8, u8);
+pub type ColorRgba = (u8, u8, u8, u8);
+pub type MatSize = (usize, usize);
+pub type MatData = Vec<Vec<u32>>;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub enum MatKind {
     Gray,
     U8C1,
@@ -10,6 +13,15 @@ pub enum MatKind {
     #[default]
     U8C3,
     U8C4,
+    U32C1,
+    U32C2,
+    U32C3,
+    U32C4,
+}
+
+pub enum Color {
+    RGB(u8, u8, u8),
+    RGBA(u8, u8, u8, u8),
 }
 
 #[derive(Default)]
@@ -22,35 +34,97 @@ pub struct Mat {
     /// The encoding for each pixel is 0RGB:
     /// The upper 8-bits are ignored, the next 8-bits are for the red channel,
     /// the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
-    data: Vec<Vec<u32>>,
+    data: Option<MatData>,
 }
 
 impl Mat {
-    pub fn new_with_size(w: usize, h: usize) -> Self {
+    pub fn new() -> Self {
+        Mat {
+            rows: 0,
+            cols: 0,
+            chan: 1,
+            kind: MatKind::Gray,
+            data: None,
+        }
+    }
+    pub fn new_with_size(size: MatSize) -> Self {
         let mut mat = Mat::default();
-        mat.cols = w;
-        mat.rows = h;
+        mat.cols = size.0;
+        mat.rows = size.1;
         mat.chan = 3;
         mat.kind = MatKind::U8C3;
-        mat.data = vec![vec![0; w]; h];
+        mat.data = Some(vec![vec![0u32; size.0]; size.1]);
         mat
     }
-    pub fn new_with_size_rgb(w: usize, h: usize, rgb: u32) -> Self {
+    pub fn new_with_size_rgb(size: MatSize, rgb: u32) -> Self {
         let mut mat = Mat::default();
-        mat.cols = w;
-        mat.rows = h;
+        mat.cols = size.0;
+        mat.rows = size.1;
         mat.chan = 3;
         mat.kind = MatKind::U8C3;
-        mat.data = vec![vec![rgb; w]; h];
+        mat.data = Some(vec![vec![rgb; size.0]; size.1]);
         mat
     }
 
-    pub fn from_rgb(r: u8, g: u8, b: u8) -> u32 {
-        let (r, g, b) = (r as u32, g as u32, b as u32);
+    pub fn new_with_size_data(size: MatSize, data: Vec<u32>) -> Self {
+        if data.len() != size.0 * size.1 {
+            panic!("data size not satisfied");
+        }
+        let mut mat = Mat::default();
+        mat.cols = size.0;
+        mat.rows = size.1;
+        mat.chan = 3;
+        mat.kind = MatKind::U8C3;
+        mat.data = Some(
+            data.chunks(size.0)
+                .map(|x| x.to_vec())
+                .collect::<Vec<Vec<u32>>>(),
+        );
+        mat
+    }
+
+    pub fn new_with_data_w(data: Vec<u32>, w: usize) -> Self {
+        if data.len() % w != 0 {
+            panic!("data size not satisfied");
+        }
+        let mut mat = Mat::default();
+        let h = data.len() / w;
+        mat.cols = w;
+        mat.rows = h;
+        mat.chan = 3;
+        mat.kind = MatKind::U8C3;
+        mat.data = Some(
+            data.chunks(w)
+                .map(|x| x.to_vec())
+                .collect::<Vec<Vec<u32>>>(),
+        );
+        mat
+    }
+
+    pub fn new_with_data_h(data: Vec<u32>, h: usize) -> Self {
+        if data.len() % h != 0 {
+            panic!("data size not satisfied");
+        }
+        let mut mat = Mat::default();
+        let w = data.len() / h;
+        mat.cols = w;
+        mat.rows = h;
+        mat.chan = 3;
+        mat.kind = MatKind::U8C3;
+        mat.data = Some(
+            data.chunks(w)
+                .map(|x| x.to_vec())
+                .collect::<Vec<Vec<u32>>>(),
+        );
+        mat
+    }
+
+    pub fn from_rgb(rgb: ColorRgb) -> u32 {
+        let (r, g, b) = (rgb.0 as u32, rgb.1 as u32, rgb.2 as u32);
         (r << 16) | (g << 8) | b
     }
 
-    pub fn to_rgb(rgb: u32) -> (u8, u8, u8) {
+    pub fn to_rgb(rgb: u32) -> ColorRgb {
         (
             (rgb >> 16) as u8 & 0xff,
             (rgb >> 8) as u8 & 0xff,
@@ -58,7 +132,7 @@ impl Mat {
         )
     }
 
-    pub fn size(&self) -> (usize, usize) {
+    pub fn size(&self) -> MatSize {
         (self.cols, self.rows)
     }
 
@@ -66,7 +140,7 @@ impl Mat {
         self.chan
     }
 
-    pub fn data(&self) -> &Vec<Vec<u32>> {
+    pub fn data(&self) -> &Option<MatData> {
         &self.data
     }
 
@@ -82,32 +156,19 @@ impl Mat {
     }
 
     pub fn show(&self, title: &str) {
-        let mut buf: Vec<u32> = self.data.iter().flatten().copied().collect();
-        let mut window = Window::new(title, self.w(), self.h(), WindowOptions::default())
-            .unwrap_or_else(|e| panic!("{}", e));
-        window.set_target_fps(60);
+        if let Some(ref data) = self.data {
+            let mut buf: Vec<u32> = data.iter().flatten().copied().collect();
+            let mut window = Window::new(title, self.w(), self.h(), WindowOptions::default())
+                .unwrap_or_else(|e| panic!("{}", e));
+            window.set_target_fps(60);
 
-        while window.is_open() && !window.is_key_down(Key::Escape) {
-            for _i in buf.iter_mut() {
-                // todo
-                // *_i = ?
+            while window.is_open() && !window.is_key_down(Key::Escape) {
+                for _i in buf.iter_mut() {
+                    // todo
+                    // *_i = ?
+                }
+                window.update_with_buffer(&buf, self.w(), self.h()).unwrap();
             }
-
-            window.update_with_buffer(&buf, self.w(), self.h()).unwrap();
         }
-    }
-
-    pub fn dct(&self) -> Vec<f64> {
-        let buf: Vec<f64> = self.data.iter().flatten().map(|x| *x as f64).collect();
-        one::dct(&buf)
-    }
-
-    pub fn idct(&mut self, dct: Vec<f64>) -> &Mat {
-        let idct: Vec<u32> = one::idct(&dct).iter().map(|x| *x as u32).collect();
-        self.data = idct
-            .chunks(self.cols)
-            .map(|c| c.to_vec())
-            .collect::<Vec<Vec<u32>>>();
-        self
     }
 }

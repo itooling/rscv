@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 
+/// dct algorithm
 pub fn dct(input: &[f64]) -> Vec<f64> {
     let n = input.len();
     let mut output = vec![0.0; n];
@@ -21,6 +22,7 @@ pub fn dct(input: &[f64]) -> Vec<f64> {
     output
 }
 
+/// idct algorithm
 pub fn idct(input: &[f64]) -> Vec<f64> {
     let n = input.len();
     let mut output = vec![0.0; n];

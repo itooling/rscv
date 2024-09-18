@@ -20,7 +20,7 @@ fn test_dct() {
 
 #[test]
 fn test_rgb() {
-    let rgb = Mat::from_rgb(10, 100, 200);
+    let rgb = Mat::from_rgb((10, 100, 200));
     println!("rgb: {}", rgb);
     println!("r g b: {:?}", Mat::to_rgb(rgb));
 }
