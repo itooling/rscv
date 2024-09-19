@@ -112,7 +112,7 @@ pub type MatSize = (usize, usize);
 pub type MatData<T> = Vec<T>;
 
 #[derive(Clone)]
-pub enum MatEnum {
+pub enum MatMode {
     Gray,
     U8C1,
     U8C2,
@@ -130,35 +130,35 @@ pub enum MatEnum {
     U32S4,
 }
 
-impl MatEnum {
+impl MatMode {
     /// return chan and data
     pub fn kind<D: DataKind>(&self, size: MatSize) -> (usize, Vec<D::Kind>) {
         match self {
-            MatEnum::Gray => (1, D::color(D::zero(), size, 1)),
-            MatEnum::U8C1 => (1, D::color(D::zero(), size, 1)),
-            MatEnum::U8C2 => (2, D::color(D::zero(), size, 2)),
-            MatEnum::U8C3 => (3, D::color(D::zero(), size, 3)),
-            MatEnum::U8C4 => (4, D::color(D::zero(), size, 4)),
-            MatEnum::U32S3 => (3, D::color(D::zero(), size, 3)),
-            MatEnum::U32S4 => (4, D::color(D::zero(), size, 4)),
+            MatMode::Gray => (1, D::color(D::zero(), size, 1)),
+            MatMode::U8C1 => (1, D::color(D::zero(), size, 1)),
+            MatMode::U8C2 => (2, D::color(D::zero(), size, 2)),
+            MatMode::U8C3 => (3, D::color(D::zero(), size, 3)),
+            MatMode::U8C4 => (4, D::color(D::zero(), size, 4)),
+            MatMode::U32S3 => (3, D::color(D::zero(), size, 3)),
+            MatMode::U32S4 => (4, D::color(D::zero(), size, 4)),
         }
     }
 
     /// return chan and data
     pub fn kind_color<D: DataKind>(&self, size: MatSize, color: u32) -> (usize, Vec<D::Kind>) {
         match self {
-            MatEnum::Gray => (1, D::color(color, size, 1)),
-            MatEnum::U8C1 => (1, D::color(color, size, 1)),
-            MatEnum::U8C2 => (2, D::color(color, size, 2)),
-            MatEnum::U8C3 => (3, D::color(color, size, 3)),
-            MatEnum::U8C4 => (4, D::color(color, size, 4)),
-            MatEnum::U32S3 => (3, D::color(color, size, 3)),
-            MatEnum::U32S4 => (4, D::color(color, size, 4)),
+            MatMode::Gray => (1, D::color(color, size, 1)),
+            MatMode::U8C1 => (1, D::color(color, size, 1)),
+            MatMode::U8C2 => (2, D::color(color, size, 2)),
+            MatMode::U8C3 => (3, D::color(color, size, 3)),
+            MatMode::U8C4 => (4, D::color(color, size, 4)),
+            MatMode::U32S3 => (3, D::color(color, size, 3)),
+            MatMode::U32S4 => (4, D::color(color, size, 4)),
         }
     }
 }
 
-impl MatKind for MatEnum {
+impl MatKind for MatMode {
     type Kind = u8;
 }
 
@@ -168,11 +168,11 @@ pub enum Color {
 }
 
 #[derive(Clone)]
-pub struct Mat<T> {
+pub struct Mat<T = u8> {
     w: usize,
     h: usize,
     chan: usize,
-    kind: MatEnum,
+    kind: MatMode,
     data: MatData<T>,
 }
 
@@ -185,7 +185,7 @@ impl Mat<u8> {
             w: img.width() as usize,
             h: img.height() as usize,
             chan: 3,
-            kind: MatEnum::U8C3,
+            kind: MatMode::U8C3,
             data: data,
         }
     }
@@ -195,7 +195,7 @@ impl<D> Mat<D>
 where
     D: DataKind,
 {
-    pub fn new(size: MatSize, kind: MatEnum) -> Mat<D::Kind> {
+    pub fn new(size: MatSize, kind: MatMode) -> Mat<D::Kind> {
         let (chan, data) = kind.kind::<D>(size);
         Mat {
             w: size.0,
@@ -206,7 +206,7 @@ where
         }
     }
 
-    pub fn new_color(size: MatSize, kind: MatEnum, color: u32) -> Mat<D::Kind> {
+    pub fn new_color(size: MatSize, kind: MatMode, color: u32) -> Mat<D::Kind> {
         let (chan, data) = kind.kind_color::<D>(size, color);
         Mat {
             w: size.0,
@@ -232,7 +232,7 @@ where
     pub fn h(&self) -> usize {
         self.h
     }
-    pub fn kind(&self) -> &MatEnum {
+    pub fn kind(&self) -> &MatMode {
         &self.kind
     }
 

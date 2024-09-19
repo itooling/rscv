@@ -1,28 +1,38 @@
 use winit::{
     application::ApplicationHandler,
+    dpi::{LogicalSize, Size},
     event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop},
-    window::Window,
+    window::{Window, WindowAttributes},
 };
 
-pub fn draw() {
-    let event_loop = EventLoop::new().unwrap();
-    let mut app = App::default();
-    event_loop.run_app(&mut app).unwrap();
+pub fn draw(title: &str, w: usize, h: usize) {
+    let eloop = EventLoop::new().unwrap();
+    let mut app = App::new(title, w, h);
+    eloop.run_app(&mut app).unwrap();
 }
 
 #[derive(Default)]
 pub struct App {
+    attr: WindowAttributes,
     window: Option<Window>,
+}
+
+impl App {
+    fn new(title: &str, w: usize, h: usize) -> App {
+        let attr = Window::default_attributes()
+            .with_title(title)
+            .with_inner_size(Size::Logical(LogicalSize::new(w as f64, h as f64)));
+        App {
+            attr: attr,
+            window: None,
+        }
+    }
 }
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        self.window = Some(
-            event_loop
-                .create_window(Window::default_attributes())
-                .unwrap(),
-        );
+        self.window = Some(event_loop.create_window(self.attr.clone()).unwrap());
     }
 
     fn window_event(
