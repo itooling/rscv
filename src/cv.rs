@@ -1,41 +1,49 @@
+use image::EncodableLayout;
 use minifb::{Key, Window, WindowOptions};
 
 use crate::one;
 
 pub trait DataKind: Clone {
-    fn zero() -> Self;
-    fn pix(pix: Self, size: MatSize, chan: usize) -> Vec<Self>;
-    fn argb(argb: u32, size: MatSize, chan: usize) -> Vec<Self>;
+    type Kind;
+
+    /// get zero
+    fn zero() -> u32;
+
+    /// set color
+    fn color(color: u32, size: MatSize, chan: usize) -> Vec<Self::Kind>;
+
     fn buffer(data: &Vec<Self>, chan: usize) -> Vec<u32>;
 }
 
+pub trait MatKind {
+    type Kind;
+}
+
 impl DataKind for u8 {
-    fn zero() -> Self {
-        0u8
+    type Kind = u8;
+
+    fn zero() -> u32 {
+        0u32
     }
 
-    fn pix(pix: Self, size: MatSize, chan: usize) -> Vec<Self> {
-        vec![pix; size.0 * size.1 * chan]
-    }
-
-    fn argb(argb: u32, size: MatSize, chan: usize) -> Vec<Self> {
+    fn color(color: u32, size: MatSize, chan: usize) -> Vec<Self> {
         match chan {
             1 => {
-                let p = one::to_argb(argb);
+                let p = one::to_argb(color);
                 vec![p.3; size.0 * size.1]
             }
             2 => {
-                let p = one::to_argb(argb);
+                let p = one::to_argb(color);
                 let pp = vec![vec![p.2, p.3]; size.0 * size.1];
                 pp.into_iter().flatten().collect()
             }
             3 => {
-                let p = one::to_argb(argb);
+                let p = one::to_argb(color);
                 let pp = vec![vec![p.1, p.2, p.3]; size.0 * size.1];
                 pp.into_iter().flatten().collect()
             }
             4 => {
-                let p = one::to_argb(argb);
+                let p = one::to_argb(color);
                 let pp = vec![vec![p.0, p.1, p.2, p.3]; size.0 * size.1];
                 pp.into_iter().flatten().collect()
             }
@@ -71,25 +79,16 @@ impl DataKind for u8 {
 }
 
 impl DataKind for u32 {
-    fn zero() -> Self {
+    type Kind = u32;
+
+    fn zero() -> u32 {
         0u32
     }
 
-    fn pix(pix: Self, size: MatSize, chan: usize) -> Vec<Self> {
+    fn color(color: u32, size: MatSize, chan: usize) -> Vec<Self> {
         match chan {
             1 | 2 | 3 | 4 => {
-                vec![pix; size.0 * size.1]
-            }
-            _ => {
-                vec![]
-            }
-        }
-    }
-
-    fn argb(argb: u32, size: MatSize, chan: usize) -> Vec<Self> {
-        match chan {
-            1 | 2 | 3 | 4 => {
-                vec![argb; size.0 * size.1]
+                vec![color; size.0 * size.1]
             }
             _ => {
                 vec![]
@@ -112,7 +111,8 @@ pub type ColorArgb = (u8, u8, u8, u8);
 pub type MatSize = (usize, usize);
 pub type MatData<T> = Vec<T>;
 
-pub enum MatKind {
+#[derive(Clone)]
+pub enum MatEnum {
     Gray,
     U8C1,
     U8C2,
@@ -122,41 +122,44 @@ pub enum MatKind {
     /// The encoding for each pixel is 0RGB:
     /// The upper 8-bits are ignored, the next 8-bits are for the red channel,
     /// the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
-    U32B3,
+    U32S3,
     /// use 32-bit pixel.
     /// The encoding for each pixel is ARGB:
     /// The upper 8-bits are alpha, the next 8-bits are for the red channel,
     /// the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
-    U32B4,
+    U32S4,
 }
 
-impl MatKind {
+impl MatEnum {
     /// return chan and data
-    pub fn kind<T: DataKind>(&self, size: MatSize) -> (usize, Vec<T>) {
+    pub fn kind<D: DataKind>(&self, size: MatSize) -> (usize, Vec<D::Kind>) {
         match self {
-            MatKind::Gray => (1, T::pix(T::zero(), size, 1)),
-            MatKind::U8C1 => (1, T::pix(T::zero(), size, 1)),
-            MatKind::U8C2 => (2, T::pix(T::zero(), size, 2)),
-            MatKind::U8C3 => (3, T::pix(T::zero(), size, 3)),
-            MatKind::U8C4 => (4, T::pix(T::zero(), size, 4)),
-            MatKind::U32B3 => (3, T::pix(T::zero(), size, 3)),
-            MatKind::U32B4 => (4, T::pix(T::zero(), size, 4)),
+            MatEnum::Gray => (1, D::color(D::zero(), size, 1)),
+            MatEnum::U8C1 => (1, D::color(D::zero(), size, 1)),
+            MatEnum::U8C2 => (2, D::color(D::zero(), size, 2)),
+            MatEnum::U8C3 => (3, D::color(D::zero(), size, 3)),
+            MatEnum::U8C4 => (4, D::color(D::zero(), size, 4)),
+            MatEnum::U32S3 => (3, D::color(D::zero(), size, 3)),
+            MatEnum::U32S4 => (4, D::color(D::zero(), size, 4)),
         }
     }
 
     /// return chan and data
-    pub fn kind_with_pix<T: DataKind>(&self, size: MatSize, pix: u32) -> (usize, Vec<T>) {
-        // let
+    pub fn kind_color<D: DataKind>(&self, size: MatSize, color: u32) -> (usize, Vec<D::Kind>) {
         match self {
-            MatKind::Gray => (1, T::argb(pix, size, 1)),
-            MatKind::U8C1 => (1, T::argb(pix, size, 1)),
-            MatKind::U8C2 => (2, T::argb(pix, size, 2)),
-            MatKind::U8C3 => (3, T::argb(pix, size, 3)),
-            MatKind::U8C4 => (4, T::argb(pix, size, 4)),
-            MatKind::U32B3 => (3, T::argb(pix, size, 3)),
-            MatKind::U32B4 => (4, T::argb(pix, size, 4)),
+            MatEnum::Gray => (1, D::color(color, size, 1)),
+            MatEnum::U8C1 => (1, D::color(color, size, 1)),
+            MatEnum::U8C2 => (2, D::color(color, size, 2)),
+            MatEnum::U8C3 => (3, D::color(color, size, 3)),
+            MatEnum::U8C4 => (4, D::color(color, size, 4)),
+            MatEnum::U32S3 => (3, D::color(color, size, 3)),
+            MatEnum::U32S4 => (4, D::color(color, size, 4)),
         }
     }
+}
+
+impl MatKind for MatEnum {
+    type Kind = u8;
 }
 
 pub enum Color {
@@ -164,18 +167,36 @@ pub enum Color {
     RGBA(u8, u8, u8, u8),
 }
 
-pub struct Mat<T: DataKind> {
+#[derive(Clone)]
+pub struct Mat<T> {
     w: usize,
     h: usize,
     chan: usize,
-    kind: MatKind,
+    kind: MatEnum,
     data: MatData<T>,
 }
 
-impl<T: DataKind> Mat<T> {
-    pub fn new(size: MatSize, kind: MatKind) -> Mat<T> {
-        let (chan, data) = kind.kind(size);
+impl Mat<u8> {
+    pub fn open(path: &str) -> Mat<u8> {
+        let img = image::open(path).expect("open file error");
+        let rgb = img.to_rgb8();
+        let data = rgb.as_bytes().to_vec();
+        Mat {
+            w: img.width() as usize,
+            h: img.height() as usize,
+            chan: 3,
+            kind: MatEnum::U8C3,
+            data: data,
+        }
+    }
+}
 
+impl<D> Mat<D>
+where
+    D: DataKind,
+{
+    pub fn new(size: MatSize, kind: MatEnum) -> Mat<D::Kind> {
+        let (chan, data) = kind.kind::<D>(size);
         Mat {
             w: size.0,
             h: size.1,
@@ -185,9 +206,8 @@ impl<T: DataKind> Mat<T> {
         }
     }
 
-    pub fn new_with_size_pix(size: MatSize, kind: MatKind, pix: u32) -> Mat<T> {
-        let (chan, data) = kind.kind_with_pix(size, pix);
-
+    pub fn new_color(size: MatSize, kind: MatEnum, color: u32) -> Mat<D::Kind> {
+        let (chan, data) = kind.kind_color::<D>(size, color);
         Mat {
             w: size.0,
             h: size.1,
@@ -205,10 +225,6 @@ impl<T: DataKind> Mat<T> {
         self.chan
     }
 
-    pub fn data(&self) -> &MatData<T> {
-        &self.data
-    }
-
     pub fn w(&self) -> usize {
         self.w
     }
@@ -216,13 +232,13 @@ impl<T: DataKind> Mat<T> {
     pub fn h(&self) -> usize {
         self.h
     }
-    pub fn kind(&self) -> &MatKind {
+    pub fn kind(&self) -> &MatEnum {
         &self.kind
     }
 
     pub fn show(&self, title: &str) {
-        let mut buffer = T::buffer(&self.data, self.chan);
-        let mut window = Window::new(title, self.w(), self.h(), WindowOptions::default())
+        let mut buffer = D::buffer(&self.data, self.chan);
+        let mut window = Window::new(title, self.w, self.h, WindowOptions::default())
             .unwrap_or_else(|e| panic!("{}", e));
         window.set_target_fps(60);
 
@@ -231,9 +247,7 @@ impl<T: DataKind> Mat<T> {
                 // todo
                 // *_i = ?
             }
-            window
-                .update_with_buffer(&buffer, self.w(), self.h())
-                .unwrap();
+            window.update_with_buffer(&buffer, self.w, self.h).unwrap();
         }
     }
 }
