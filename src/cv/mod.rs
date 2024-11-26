@@ -9,8 +9,6 @@ pub use vary::*;
 use image::EncodableLayout;
 use minifb::{Key, Window, WindowOptions};
 
-use crate::cv;
-
 pub trait DataKind: Clone {
     type Kind;
 
@@ -37,21 +35,21 @@ impl DataKind for u8 {
     fn color(color: u32, size: MatSize, chan: usize) -> Vec<Self> {
         match chan {
             1 => {
-                let p = cv::to_argb(color);
+                let p = to_argb(color);
                 vec![p.3; size.0 * size.1]
             }
             2 => {
-                let p = cv::to_argb(color);
+                let p = to_argb(color);
                 let pp = vec![vec![p.2, p.3]; size.0 * size.1];
                 pp.into_iter().flatten().collect()
             }
             3 => {
-                let p = cv::to_argb(color);
+                let p = to_argb(color);
                 let pp = vec![vec![p.1, p.2, p.3]; size.0 * size.1];
                 pp.into_iter().flatten().collect()
             }
             4 => {
-                let p = cv::to_argb(color);
+                let p = to_argb(color);
                 let pp = vec![vec![p.0, p.1, p.2, p.3]; size.0 * size.1];
                 pp.into_iter().flatten().collect()
             }
@@ -65,19 +63,19 @@ impl DataKind for u8 {
         match chan {
             1 => data
                 .chunks(chan)
-                .map(|x| cv::from_argb(0, 0, 0, x[0]))
+                .map(|x| from_argb(0, 0, 0, x[0]))
                 .collect(),
             2 => data
                 .chunks(chan)
-                .map(|x| cv::from_argb(0, 0, x[0], x[1]))
+                .map(|x| from_argb(0, 0, x[0], x[1]))
                 .collect(),
             3 => data
                 .chunks(chan)
-                .map(|x| cv::from_argb(0, x[0], x[1], x[2]))
+                .map(|x| from_argb(0, x[0], x[1], x[2]))
                 .collect(),
             4 => data
                 .chunks(chan)
-                .map(|x| cv::from_argb(x[0], x[1], x[2], x[3]))
+                .map(|x| from_argb(x[0], x[1], x[2], x[3]))
                 .collect(),
             _ => {
                 vec![]
