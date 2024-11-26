@@ -4,6 +4,9 @@ pub mod vary;
 #[allow(dead_code)]
 pub mod win;
 
+#[allow(dead_code)]
+pub mod img;
+
 pub use vary::*;
 
 use image::EncodableLayout;
